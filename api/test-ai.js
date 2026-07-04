@@ -4,7 +4,8 @@
 module.exports = async (req, res) => {
   const word = (req.query && req.query.word) ? String(req.query.word) : "양념통닭";
   const key = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  // 주소에 ?model=... 를 주면 그 모델로 테스트 (여러 모델 비교용)
+  const model = (req.query && req.query.model) ? String(req.query.model) : (process.env.GEMINI_MODEL || "gemini-2.5-flash");
 
   if (!key) {
     return res.status(200).json({ ok: false, hasKey: false, reason: "GEMINI_API_KEY 환경변수가 없습니다. Vercel에 등록 후 Redeploy 하세요." });
