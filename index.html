@@ -41,6 +41,18 @@
     font-size: 26px; font-weight: 800; text-align: center; line-height: 1.5;
     padding: 24px 12px; color: #1f2430;
   }
+  .tiles { display: flex; gap: 10px; justify-content: center; padding: 8px 0; }
+  .tile {
+    width: 68px; height: 84px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; font-weight: 900;
+    box-shadow: 0 4px 12px rgba(31,36,48,.08);
+  }
+  .tile.fill { background: #ffffff; color: #1f2430; border: 2px solid #eef2ff; }
+  .tile.blank { background: #f3f0ff; color: #b9a7f0; border: 2px dashed #ddd3fa; }
+  @media (max-width: 420px) {
+    .tile { width: 56px; height: 70px; font-size: 34px; }
+  }
   .badge { display: inline-block; background: #eef2ff; color: #3b4cca;
     padding: 4px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; }
   .result-ok { color: #16a34a; font-weight: 800; font-size: 24px; text-align: center; }
@@ -137,8 +149,9 @@
 
       <div class="clue" id="sClue">강사가 게임을 시작하면 문제가 나옵니다.</div>
 
+      <div class="note">앞 2글자를 보고, 이어지는 뒤 2글자를 입력하세요.</div>
       <div id="sAnswerBox" class="hidden">
-        <input id="sAnswer" placeholder="정답 입력 후 Enter">
+        <input id="sAnswer" placeholder="뒤 2글자 입력 후 Enter" maxlength="4">
         <button id="btnSubmit">제출</button>
       </div>
       <div id="sResult" class="err"></div>
@@ -210,9 +223,24 @@ let authReady = new Promise(resolve => {
   auth.signInAnonymously().catch(e => alert("로그인 오류: " + e.message));
 });
 async function myToken() { return auth.currentUser.getIdToken(); }
-async function clueOf(index) {
-  const snap = await db.ref("questionBank/fourWordQuiz/questions/" + index + "/clue").get();
+async function prefixOf(index) {
+  const snap = await db.ref("questionBank/fourWordQuiz/questions/" + index + "/prefix").get();
   return snap.exists() ? snap.val() : "(문제 없음)";
+}
+// 4글자 타일: 앞 2글자(채움) + 뒤 2글자(입력값 또는 ?)
+function tilesHtml(prefix, typed) {
+  typed = typed || "";
+  const p = String(prefix || "").split("");
+  const t = typed.split("");
+  const cells = [
+    { c: p[0] || "", fill: true },
+    { c: p[1] || "", fill: true },
+    { c: t[0] || "?", fill: !!t[0] },
+    { c: t[1] || "?", fill: !!t[1] },
+  ];
+  return '<div class="tiles">' + cells.map(x =>
+    '<div class="tile ' + (x.fill ? "fill" : "blank") + '">' + escapeHtml(x.c) + "</div>"
+  ).join("") + "</div>";
 }
 
 /* ================= 화면 전환 ================= */
@@ -278,7 +306,7 @@ function startTeacherPanel(code, total) {
     const idx = s.val();
     if (idx === null || idx < 0) { $("tClue").textContent = "아직 시작 전입니다."; $("tProgress").textContent = ""; return; }
     $("tProgress").textContent = `문제 ${idx + 1} / ${total}`;
-    $("tClue").textContent = await clueOf(idx);
+    $("tClue").innerHTML = tilesHtml(await prefixOf(idx), "");
   });
   roomRef.child("ranking").on("value", s => {
     const r = s.val();
@@ -356,7 +384,7 @@ async function finalize() {
 /* ================================================================
    학생(Student)
 ================================================================ */
-let myRoom = null, myUid = null, myIndex = -1, answeredIndex = -1;
+let myRoom = null, myUid = null, myIndex = -1, answeredIndex = -1, curPrefix = "";
 
 $("sRoom").addEventListener("keydown", e => { if (e.key === "Enter") $("sNick").focus(); });
 $("sNick").addEventListener("keydown", e => { if (e.key === "Enter") $("btnJoin").click(); });
@@ -413,7 +441,8 @@ function startStudentGame() {
     if (myIndex < 0) { $("sClue").textContent = "강사가 게임을 시작하면 문제가 나옵니다."; hide("sAnswerBox"); return; }
     const t = await total();
     $("sProgress").textContent = `문제 ${myIndex + 1} / ${t}`;
-    $("sClue").textContent = await clueOf(myIndex);
+    curPrefix = await prefixOf(myIndex);
+    $("sClue").innerHTML = tilesHtml(curPrefix, "");
     $("sResult").textContent = "";
     $("sAnswer").value = "";
     // 새 문제 → 다시 답할 수 있음
@@ -434,6 +463,9 @@ function startStudentGame() {
 }
 
 $("sAnswer").addEventListener("keydown", e => { if (e.key === "Enter") $("btnSubmit").click(); });
+$("sAnswer").addEventListener("input", () => {
+  if (myIndex >= 0) $("sClue").innerHTML = tilesHtml(curPrefix, $("sAnswer").value.trim());
+});
 
 $("btnSubmit").onclick = async () => {
   const answer = $("sAnswer").value.trim();
@@ -452,7 +484,7 @@ $("btnSubmit").onclick = async () => {
       return;
     }
     answeredIndex = myIndex;
-    if (data.correct) { sfx.correct(); $("sResult").innerHTML = '<div class="result-ok">정답입니다 (+1)</div>'; }
+    if (data.correct) { sfx.correct(); $("sResult").innerHTML = '<div class="result-ok">정답입니다 (+1) &mdash; ' + escapeHtml(curPrefix + answer) + '</div>'; }
     else { sfx.wrong(); $("sResult").innerHTML = '<div class="result-no">오답입니다 (-1)</div>'; }
   } catch (e) {
     $("sResult").textContent = "네트워크 오류: " + e.message;

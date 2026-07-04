@@ -5,7 +5,7 @@
         "count": { ".read": "auth != null" },
         "questions": {
           "$i": {
-            "clue":    { ".read": "auth != null" },
+            "prefix":  { ".read": "auth != null" },
             "answers": { ".read": false, ".write": false }
           }
         }
