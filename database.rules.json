@@ -18,10 +18,12 @@
 
         "hostUid":        { ".write": false },
         "createdAt":      { ".write": false },
+        "bankCount":      { ".write": false },
         "gameType":       { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
         "gameStatus":     { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
         "currentIndex":   { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
         "totalQuestions": { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
+        "order":          { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
 
         "ranking": {
           ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()"

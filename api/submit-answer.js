@@ -43,21 +43,26 @@ module.exports = async (req, res) => {
       return res.status(409).json({ error: "이미 제출했습니다.", already: true });
     }
 
-    // 4) 정답 목록 읽기 (서버만 접근 가능) + 채점
-    const ansSnap = await db.ref("questionBank/fourWordQuiz/questions/" + idx + "/answers").get();
+    // 4) 랜덤 순서(order)로 실제 문제 번호를 찾아 정답 목록 읽기 + 채점
+    const order = room.order || [];
+    const bankIndex = order[idx];
+    if (bankIndex === undefined || bankIndex === null) {
+      return res.status(409).json({ error: "문제를 찾을 수 없습니다." });
+    }
+    const ansSnap = await db.ref("questionBank/fourWordQuiz/questions/" + bankIndex + "/answers").get();
     const answers = ansSnap.exists() ? Object.values(ansSnap.val()) : [];
     const my = norm(answer);
     const correct = answers.some((a) => norm(a) === my);
 
-    // 5) 제출 기록 + 점수 반영 (정답 +1 / 오답 -1)
+    // 5) 제출 기록 + 점수 반영 (정답 +1 / 오답 0점, 감점 없음)
     await subRef.set({
       value: String(answer).slice(0, 50),
       correct,
       submittedAt: admin.database.ServerValue.TIMESTAMP,
     });
     const scoreRef = db.ref("rooms/" + roomCode + "/players/" + uid + "/score");
-    await scoreRef.transaction((cur) => (cur || 0) + (correct ? 1 : -1));
-    const newScore = (await scoreRef.get()).val();
+    if (correct) { await scoreRef.transaction((cur) => (cur || 0) + 1); }
+    const newScore = (await scoreRef.get()).val() || 0;
 
     return res.status(200).json({ correct, score: newScore });
   } catch (e) {

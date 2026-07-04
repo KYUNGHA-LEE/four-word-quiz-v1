@@ -48,16 +48,18 @@ module.exports = async (req, res) => {
     if (!roomCode) return res.status(500).json({ error: "방 코드 생성에 실패했습니다. 다시 시도해 주세요." });
 
     // 5) 방 생성 + hostUid 등록 (서버에서만)
+    //    실제 출제 문제 수(totalQuestions)와 순서(order)는 강사가 '게임 시작' 시 정한다.
     await db.ref("rooms/" + roomCode).set({
       hostUid,
       gameType: "fourWordQuiz",
       gameStatus: "waiting",
       currentIndex: -1,
-      totalQuestions: total,
+      bankCount: total,
+      totalQuestions: 0,
       createdAt: admin.database.ServerValue.TIMESTAMP,
     });
 
-    return res.status(200).json({ roomCode, totalQuestions: total });
+    return res.status(200).json({ roomCode, bankCount: total });
   } catch (e) {
     return res.status(500).json({ error: "서버 오류", detail: String((e && e.message) || e) });
   }
