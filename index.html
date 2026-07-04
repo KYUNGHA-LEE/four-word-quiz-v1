@@ -438,7 +438,13 @@ async function finalize() {
 /* ================================================================
    학생(Student)
 ================================================================ */
-let myRoom = null, myUid = null, myIndex = -1, answeredIndex = -1, curPrefix = "";
+let myRoom = null, myUid = null, myIndex = -1, answeredIndex = -1, curPrefix = "", curStatus = "waiting";
+
+// 답 입력창 표시 여부를 한 곳에서 결정 (비동기 경쟁 방지)
+function refreshAnswerBox() {
+  if (curStatus === "playing" && myIndex >= 0 && answeredIndex !== myIndex) show("sAnswerBox");
+  else hide("sAnswerBox");
+}
 
 onEnter($("sRoom"), () => $("sNick").focus());
 onEnter($("sNick"), () => $("btnJoin").click());
@@ -480,19 +486,18 @@ function startStudentGame() {
 
   // 상태
   roomRef.child("gameStatus").on("value", s => {
-    const st = s.val();
-    $("sStatus").textContent = statusText(st);
-    if (st === "playing") { if (myIndex >= 0 && answeredIndex !== myIndex) show("sAnswerBox"); }
-    else hide("sAnswerBox");
+    curStatus = s.val();
+    $("sStatus").textContent = statusText(curStatus);
+    refreshAnswerBox();
   });
 
   // 현재 문제 (랜덤 순서 order 사용)
   roomRef.child("currentIndex").on("value", async s => {
     const pos = s.val();
     myIndex = (pos ?? -1);
-    if (myIndex < 0) { $("sClue").textContent = "강사가 게임을 시작하면 문제가 나옵니다."; hide("sAnswerBox"); $("sProgress").textContent = ""; return; }
-    const [orderSnap, totalSnap, statusSnap] = await Promise.all([
-      roomRef.child("order").get(), roomRef.child("totalQuestions").get(), roomRef.child("gameStatus").get()
+    if (myIndex < 0) { $("sClue").textContent = "강사가 게임을 시작하면 문제가 나옵니다."; $("sProgress").textContent = ""; refreshAnswerBox(); return; }
+    const [orderSnap, totalSnap] = await Promise.all([
+      roomRef.child("order").get(), roomRef.child("totalQuestions").get()
     ]);
     const order = orderSnap.val() || [];
     const total = totalSnap.val() || order.length;
@@ -501,9 +506,8 @@ function startStudentGame() {
     $("sClue").innerHTML = tilesHtml(curPrefix, "");
     $("sResult").textContent = "";
     $("sAnswer").value = "";
-    // 새 문제 → 다시 답할 수 있음
-    if (statusSnap.val() === "playing" && answeredIndex !== myIndex) { show("sAnswerBox"); $("sAnswer").focus(); }
-    else hide("sAnswerBox");
+    refreshAnswerBox();
+    if (curStatus === "playing" && answeredIndex !== myIndex) $("sAnswer").focus();
   });
 
   // 최종 순위
