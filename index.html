@@ -4,80 +4,118 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>4글자 퀴즈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --violet: #8584bd;      /* 무대(배경) */
+    --hivis: #f4ed36;       /* 하이비스 옐로 강조 */
+    --buttery: #f9cc73;
+    --lilac: #61609a;       /* 카드 블록 */
+    --pink: #f8c1ba;
+    --matcha: #b5c995;
+    --magenta: #ac4f98;
+    --red: #c94245;
+    --bone: #f9f5f2;        /* 크림/카드 */
+    --ink: #1a1a1a;
+    --black: #000000;
+    --disp: 'Black Han Sans', sans-serif;
+    --body: 'Jua', 'Malgun Gothic', sans-serif;
+    --mono: 'JetBrains Mono', 'Jua', monospace;
+  }
   * { box-sizing: border-box; }
   body {
-    margin: 0; font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
-    background: #f0f4ff; color: #1f2430; min-height: 100vh;
+    margin: 0; font-family: var(--body);
+    background: var(--violet); color: var(--bone); min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
   }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 20px; }
-  h1 { text-align: center; color: #3b4cca; margin: 12px 0 4px; }
-  .sub { text-align: center; color: #6b7280; margin: 0 0 20px; font-size: 14px; }
-  .card {
-    background: #fff; border-radius: 16px; padding: 22px;
-    box-shadow: 0 6px 20px rgba(59,76,202,.08); margin-bottom: 16px;
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 20px 60px; }
+  h1 {
+    font-family: var(--disp); text-align: center; color: var(--hivis);
+    margin: 10px 0 2px; font-size: clamp(52px, 13vw, 110px);
+    line-height: 0.85; letter-spacing: 1px;
+    text-shadow: 3px 3px 0 var(--ink);
   }
+  .sub { text-align: center; color: var(--bone); margin: 0 0 24px; font-size: 13px; font-family: var(--mono); opacity: .85; }
+  .card { background: transparent; padding: 4px 0; margin-bottom: 8px; }
   .hidden { display: none !important; }
+
   button {
-    font-size: 18px; font-weight: 700; padding: 14px 18px; border: none;
-    border-radius: 12px; cursor: pointer; background: #3b4cca; color: #fff;
-    transition: transform .05s, filter .15s; width: 100%; margin-top: 8px;
+    font-family: var(--body); font-size: 18px; padding: 14px 18px;
+    border: 3px solid var(--ink); border-radius: 100px; cursor: pointer;
+    background: var(--bone); color: var(--black);
+    transition: transform .05s, filter .15s; width: 100%; margin-top: 10px;
   }
-  button:hover { filter: brightness(1.05); }
-  button:active { transform: scale(.98); }
-  button.ghost { background: #e5e9ff; color: #3b4cca; }
-  button.warn { background: #ef4444; }
-  button.gray { background: #6b7280; }
-  button.sm { font-size: 15px; padding: 10px 12px; width: auto; }
+  button:hover { filter: brightness(1.03); }
+  button:active { transform: scale(.97); }
+  /* 보조: 하이비스 아웃라인 */
+  button.ghost { background: transparent; border-color: var(--hivis); color: var(--hivis); }
+  /* 위험: 강제종료/초기화 */
+  button.warn { background: var(--red); border-color: var(--ink); color: var(--bone); }
+  /* 보조 회색 → 본화이트 아웃라인 */
+  button.gray { background: transparent; border-color: var(--bone); color: var(--bone); }
+  button.sm { font-size: 15px; padding: 10px 14px; width: auto; }
+
   input {
-    font-size: 18px; padding: 14px; border: 2px solid #cbd5e1; border-radius: 12px;
-    width: 100%; margin-top: 8px;
+    font-family: var(--body); font-size: 18px; padding: 14px;
+    border: 3px solid var(--ink); border-radius: 6px;
+    width: 100%; margin-top: 8px; background: var(--bone); color: var(--ink);
   }
-  input:focus { outline: none; border-color: #3b4cca; }
-  label { font-weight: 700; font-size: 15px; color: #374151; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  input:focus { outline: none; border-color: var(--magenta); }
+  label { font-family: var(--body); font-size: 15px; color: var(--bone); display: block; margin-top: 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
   .row > * { flex: 1; }
-  .clue {
-    font-size: 26px; font-weight: 800; text-align: center; line-height: 1.5;
-    padding: 24px 12px; color: #1f2430;
-  }
-  .tiles { display: flex; gap: 10px; justify-content: center; padding: 8px 0; }
+
+  .clue { text-align: center; padding: 18px 4px; }
+  .tiles { display: flex; gap: 12px; justify-content: center; padding: 8px 0; }
   .tile {
-    width: 68px; height: 84px; border-radius: 16px;
+    width: 84px; height: 100px; border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 42px; font-weight: 900;
-    box-shadow: 0 4px 12px rgba(31,36,48,.08);
+    font-family: var(--disp); font-size: 58px; line-height: 1;
+    border: 3px solid var(--black);
   }
-  .tile.fill { background: #ffffff; color: #1f2430; border: 2px solid #eef2ff; }
-  .tile.blank { background: #f3f0ff; color: #b9a7f0; border: 2px dashed #ddd3fa; }
-  @media (max-width: 420px) {
-    .tile { width: 56px; height: 70px; font-size: 34px; }
+  .tile.fill { background: var(--bone); color: var(--ink); }
+  .tile.blank { background: var(--lilac); color: var(--hivis); border-style: dashed; border-color: var(--hivis); }
+  @media (max-width: 480px) {
+    .tile { width: 62px; height: 76px; font-size: 40px; gap: 8px; }
   }
-  .badge { display: inline-block; background: #eef2ff; color: #3b4cca;
-    padding: 4px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; }
-  .result-ok { color: #16a34a; font-weight: 800; font-size: 24px; text-align: center; }
-  .result-no { color: #dc2626; font-weight: 800; font-size: 24px; text-align: center; }
-  .score-big { font-size: 40px; font-weight: 900; text-align: center; color: #3b4cca; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th, td { padding: 10px; border-bottom: 1px solid #eef2f7; text-align: left; }
-  th { color: #6b7280; font-size: 13px; }
-  .rank1 { background: #fffbeb; } .rank2 { background: #f8fafc; } .rank3 { background: #fff7ed; }
-  .medal { font-size: 22px; }
-  .roomcode { font-size: 34px; font-weight: 900; letter-spacing: 4px; color: #3b4cca; text-align: center; }
-  .note { font-size: 13px; color: #6b7280; text-align: center; margin-top: 6px; }
-  .qr { display: block; margin: 10px auto; }
-  .linkbox { word-break: break-all; font-size: 13px; background: #f8fafc; padding: 8px; border-radius: 8px; }
-  .err { color: #dc2626; font-size: 14px; margin-top: 6px; min-height: 18px; }
+
+  .badge {
+    display: inline-block; background: var(--hivis); color: var(--black);
+    padding: 6px 16px; border-radius: 100px; font-size: 14px;
+    font-family: var(--body); border: 3px solid var(--ink);
+  }
+  .result-ok { font-family: var(--disp); color: var(--hivis); font-size: 30px; text-align: center; text-shadow: 2px 2px 0 var(--ink); }
+  .result-no { font-family: var(--disp); color: var(--pink); font-size: 30px; text-align: center; }
+  .score-big { font-family: var(--disp); font-size: 64px; text-align: center; color: var(--hivis); line-height: 1; text-shadow: 3px 3px 0 var(--ink); }
+  .roomcode { font-family: var(--disp); font-size: clamp(48px, 12vw, 80px); letter-spacing: 6px; color: var(--hivis); text-align: center; text-shadow: 3px 3px 0 var(--ink); }
+
+  /* 순위표 = 본화이트 카드 */
+  table { width: 100%; border-collapse: separate; border-spacing: 0 6px; margin-top: 8px; }
+  td { padding: 12px; text-align: left; font-family: var(--body); font-size: 18px; color: var(--ink); border: 3px solid var(--ink); border-right: none; }
+  td:first-child { border-radius: 6px 0 0 6px; }
+  td:last-child { border-right: 3px solid var(--ink); border-radius: 0 6px 6px 0; text-align: right; }
+  .rank1 td { background: var(--hivis); } .rank2 td { background: var(--bone); } .rank3 td { background: var(--pink); }
+  .medal { font-family: var(--disp); width: 64px; }
+
+  .note { font-size: 13px; color: var(--bone); text-align: center; margin-top: 8px; font-family: var(--mono); opacity: .9; }
+  .qr { display: block; margin: 14px auto; background: var(--bone); padding: 10px; border-radius: 6px; border: 3px solid var(--ink); }
+  .linkbox { word-break: break-all; font-size: 13px; background: var(--bone); color: var(--ink); padding: 10px; border-radius: 6px; font-family: var(--mono); border: 3px solid var(--ink); }
+  .err { color: var(--pink); font-size: 15px; margin-top: 8px; min-height: 18px; text-align: center; font-family: var(--body); }
   .players { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .chip { background: #eef2ff; padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; }
+  .chip { background: var(--bone); color: var(--ink); padding: 8px 12px; border-radius: 100px; font-size: 14px; }
+
   /* 강사 화면 2단 배치 */
+  h3 { font-family: var(--disp); color: var(--hivis); font-weight: normal; letter-spacing: 1px; }
   .tcols { display: flex; gap: 16px; align-items: flex-start; margin-top: 12px; }
   .tmain { flex: 2; min-width: 0; }
-  .tside { flex: 1; min-width: 170px; background: #f8fafc; border-radius: 12px; padding: 12px 14px; }
-  .tside h3 { margin: 4px 0 8px; }
+  .tside { flex: 1; min-width: 180px; background: var(--lilac); border-radius: 6px; padding: 14px 16px; border: 3px solid var(--ink); }
+  .tside h3 { margin: 2px 0 8px; color: var(--hivis); font-size: 22px; }
   .tside .players { display: block; margin-top: 0; }
-  .prow { display: flex; justify-content: space-between; align-items: center; padding: 8px 4px; border-bottom: 1px solid #eef2f7; font-size: 15px; }
-  .prow b { color: #3b4cca; }
+  .prow { display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; border-bottom: 2px solid rgba(249,245,242,.25); font-size: 17px; color: var(--bone); }
+  .prow:last-child { border-bottom: none; }
+  .prow b { color: var(--hivis); font-family: var(--disp); font-weight: normal; }
   @media (max-width: 640px) { .tcols { flex-direction: column; } .tside { width: 100%; } }
 </style>
 </head>
@@ -557,7 +595,7 @@ function renderRanking(r) {
     .filter(x => x[2])
     .map(([m, cls, p]) => `<tr class="${cls}"><td class="medal">${m}</td><td>${escapeHtml(p.nickname)}</td><td>${p.score}점</td></tr>`)
     .join("");
-  return `<table><tr><th></th><th>닉네임</th><th>점수</th></tr>${rows}</table>`;
+  return `<table>${rows}</table>`;
 }
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
