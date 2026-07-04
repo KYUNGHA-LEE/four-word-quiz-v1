@@ -16,6 +16,42 @@ const db = admin.database();
 // 정답 비교용 정규화: 공백 제거 + 소문자
 const norm = (s) => String(s == null ? "" : s).replace(/\s+/g, "").toLowerCase();
 
+// 목록에 없을 때 Gemini에게 "실제 한국어 낱말인지" 물어봄
+// 반환: true(맞음) / false(아님) / null(키 없음·오류 → 판정 불가)
+async function judgeWithGemini(word) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return null;
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key;
+  const prompt =
+    '다음이 실제로 존재하고 자연스럽게 쓰이는 한국어 낱말(합성어·사자성어 포함)인지 판단하세요. ' +
+    '맞으면 O, 아니면 X, 오직 한 글자로만 답하세요: "' + word + '"';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 5 },
+      }),
+      signal: controller.signal,
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const text = ((((data.candidates || [])[0] || {}).content || {}).parts || [])
+      .map((p) => p.text || "").join("").trim();
+    if (!text) return null;
+    if (text.includes("O") && !text.includes("X")) return true;
+    return false;
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 허용됩니다." });
   try {
@@ -52,7 +88,16 @@ module.exports = async (req, res) => {
     const ansSnap = await db.ref("questionBank/fourWordQuiz/questions/" + bankIndex + "/answers").get();
     const answers = ansSnap.exists() ? Object.values(ansSnap.val()) : [];
     const my = norm(answer);
-    const correct = answers.some((a) => norm(a) === my);
+    let correct = answers.some((a) => norm(a) === my);
+
+    // 목록에 없으면 Gemini에게 실제 낱말인지 판정 요청 (하이브리드)
+    if (!correct) {
+      const prefixSnap = await db.ref("questionBank/fourWordQuiz/questions/" + bankIndex + "/prefix").get();
+      const prefix = prefixSnap.exists() ? String(prefixSnap.val()) : "";
+      const fullWord = prefix + String(answer).replace(/\s+/g, "");
+      const ai = await judgeWithGemini(fullWord);
+      if (ai === true) correct = true;
+    }
 
     // 5) 제출 기록 + 점수 반영 (정답 +1 / 오답 0점, 감점 없음)
     await subRef.set({
