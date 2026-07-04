@@ -21,20 +21,21 @@ const norm = (s) => String(s == null ? "" : s).replace(/\s+/g, "").toLowerCase()
 async function judgeWithGemini(word) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
-  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key;
   const prompt =
     '다음이 실제로 존재하고 자연스럽게 쓰이는 한국어 낱말(합성어·사자성어 포함)인지 판단하세요. ' +
     '맞으면 O, 아니면 X, 오직 한 글자로만 답하세요: "' + word + '"';
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const resp = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 5 },
+        // 2.5 모델은 thinking 이 토큰을 먹으므로 끔(thinkingBudget:0) + 출력 여유
+        generationConfig: { temperature: 0, maxOutputTokens: 10, thinkingConfig: { thinkingBudget: 0 } },
       }),
       signal: controller.signal,
     });
