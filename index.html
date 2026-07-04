@@ -373,9 +373,13 @@ $("btnStart").onclick = async () => {
   const arr = Array.from({ length: hostBankCount }, (_, i) => i);
   for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = arr[i]; arr[i] = arr[j]; arr[j] = t; }
   const order = arr.slice(0, n);
-  sfx.start();
-  await db.ref("rooms/" + hostRoom + "/ranking").remove();
-  await hostSet({ order, totalQuestions: n, currentIndex: 0, gameStatus: "playing" });
+  try {
+    await db.ref("rooms/" + hostRoom + "/ranking").remove();
+    await hostSet({ order, totalQuestions: n, currentIndex: 0, gameStatus: "playing" });
+    sfx.start();
+  } catch (e) {
+    alert("게임 시작 실패: " + e.message + "\n\nFirebase 보안 규칙(Rules)을 최신 내용으로 다시 게시했는지 확인해 주세요.");
+  }
 };
 $("btnNext").onclick = async () => {
   sfx.click();
