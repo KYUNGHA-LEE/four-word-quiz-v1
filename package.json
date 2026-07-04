@@ -1,0 +1,9 @@
+{
+  "name": "four-word-quiz-v1",
+  "version": "1.0.0",
+  "description": "실시간 교실 게임 - 4글자 퀴즈",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^12.1.0"
+  }
+}

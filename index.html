@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4글자 퀴즈</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+    background: #f0f4ff; color: #1f2430; min-height: 100vh;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px; }
+  h1 { text-align: center; color: #3b4cca; margin: 12px 0 4px; }
+  .sub { text-align: center; color: #6b7280; margin: 0 0 20px; font-size: 14px; }
+  .card {
+    background: #fff; border-radius: 16px; padding: 22px;
+    box-shadow: 0 6px 20px rgba(59,76,202,.08); margin-bottom: 16px;
+  }
+  .hidden { display: none !important; }
+  button {
+    font-size: 18px; font-weight: 700; padding: 14px 18px; border: none;
+    border-radius: 12px; cursor: pointer; background: #3b4cca; color: #fff;
+    transition: transform .05s, filter .15s; width: 100%; margin-top: 8px;
+  }
+  button:hover { filter: brightness(1.05); }
+  button:active { transform: scale(.98); }
+  button.ghost { background: #e5e9ff; color: #3b4cca; }
+  button.warn { background: #ef4444; }
+  button.gray { background: #6b7280; }
+  button.sm { font-size: 15px; padding: 10px 12px; width: auto; }
+  input {
+    font-size: 18px; padding: 14px; border: 2px solid #cbd5e1; border-radius: 12px;
+    width: 100%; margin-top: 8px;
+  }
+  input:focus { outline: none; border-color: #3b4cca; }
+  label { font-weight: 700; font-size: 15px; color: #374151; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+  .clue {
+    font-size: 26px; font-weight: 800; text-align: center; line-height: 1.5;
+    padding: 24px 12px; color: #1f2430;
+  }
+  .badge { display: inline-block; background: #eef2ff; color: #3b4cca;
+    padding: 4px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; }
+  .result-ok { color: #16a34a; font-weight: 800; font-size: 24px; text-align: center; }
+  .result-no { color: #dc2626; font-weight: 800; font-size: 24px; text-align: center; }
+  .score-big { font-size: 40px; font-weight: 900; text-align: center; color: #3b4cca; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th, td { padding: 10px; border-bottom: 1px solid #eef2f7; text-align: left; }
+  th { color: #6b7280; font-size: 13px; }
+  .rank1 { background: #fffbeb; } .rank2 { background: #f8fafc; } .rank3 { background: #fff7ed; }
+  .medal { font-size: 22px; }
+  .roomcode { font-size: 34px; font-weight: 900; letter-spacing: 4px; color: #3b4cca; text-align: center; }
+  .note { font-size: 13px; color: #6b7280; text-align: center; margin-top: 6px; }
+  .qr { display: block; margin: 10px auto; }
+  .linkbox { word-break: break-all; font-size: 13px; background: #f8fafc; padding: 8px; border-radius: 8px; }
+  .err { color: #dc2626; font-size: 14px; margin-top: 6px; min-height: 18px; }
+  .players { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { background: #eef2ff; padding: 8px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>4글자 퀴즈</h1>
+  <p class="sub">실시간 교실 게임 · 소리가 안 나면 화면을 한 번 클릭/터치해 주세요.</p>
+
+  <!-- ================= 첫 화면 ================= -->
+  <div id="home" class="card">
+    <button id="btnGoTeacher">강사로 입장</button>
+    <button id="btnGoStudent" class="ghost">학생으로 입장</button>
+  </div>
+
+  <!-- ================= 강사 화면 ================= -->
+  <div id="teacher" class="card hidden">
+    <!-- 로그인 -->
+    <div id="teacherLogin">
+      <label>강사 비밀번호</label>
+      <input id="teacherPw" type="password" placeholder="비밀번호 입력 후 Enter" autocomplete="off">
+      <button id="btnCreateRoom">방 만들기</button>
+      <div class="err" id="teacherErr"></div>
+    </div>
+
+    <!-- 운영 -->
+    <div id="teacherPanel" class="hidden">
+      <div class="badge" id="tGameStatus">대기 중</div>
+      <div class="roomcode" id="tRoomCode">----</div>
+      <div class="note">학생 입장 링크</div>
+      <div class="linkbox" id="tLink"></div>
+      <img class="qr" id="tQR" width="180" height="180" alt="QR">
+      <div class="note" id="tProgress"></div>
+
+      <div class="clue" id="tClue">아직 시작 전입니다.</div>
+
+      <div class="row">
+        <button id="btnStart" class="sm">게임 시작</button>
+        <button id="btnNext" class="sm">다음 문제</button>
+      </div>
+      <div class="row">
+        <button id="btnPause" class="sm gray">일시정지</button>
+        <button id="btnResume" class="sm ghost">재개</button>
+      </div>
+      <div class="row">
+        <button id="btnForceEnd" class="sm warn">강제 종료</button>
+        <button id="btnReset" class="sm warn">초기화</button>
+      </div>
+      <button id="btnEditScore" class="sm gray">점수 수정</button>
+
+      <h3>참가자 <span id="tCount">0</span>명</h3>
+      <div class="players" id="tPlayers"></div>
+
+      <div id="tRankingWrap" class="hidden">
+        <h3>최종 순위 (상위 3등)</h3>
+        <div id="tRanking"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 학생 화면 ================= -->
+  <div id="student" class="card hidden">
+    <!-- 입장 -->
+    <div id="studentJoin">
+      <label>방 코드</label>
+      <input id="sRoom" inputmode="numeric" placeholder="방 코드 입력 후 Enter">
+      <label>닉네임</label>
+      <input id="sNick" placeholder="닉네임 입력 후 Enter" maxlength="20">
+      <button id="btnJoin">입장하기</button>
+      <div class="err" id="studentErr"></div>
+    </div>
+
+    <!-- 게임 -->
+    <div id="studentGame" class="hidden">
+      <div class="badge" id="sStatus">대기 중</div>
+      <div class="note">내 점수</div>
+      <div class="score-big" id="sScore">0</div>
+      <div class="note" id="sProgress"></div>
+
+      <div class="clue" id="sClue">강사가 게임을 시작하면 문제가 나옵니다.</div>
+
+      <div id="sAnswerBox" class="hidden">
+        <input id="sAnswer" placeholder="정답 입력 후 Enter">
+        <button id="btnSubmit">제출</button>
+      </div>
+      <div id="sResult" class="err"></div>
+
+      <div id="sRankingWrap" class="hidden">
+        <h3>최종 순위 (상위 3등)</h3>
+        <div id="sRanking"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+/* ================================================================
+   여기에 Firebase 2단계에서 복사한 firebaseConfig 를 붙여넣으세요 (아래 값 교체)
+   (이 값은 공개돼도 되는 값입니다)
+================================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAubt_ZOBVgU_u0VX-61SBkPs0wKOq8oGw",
+  authDomain: "four-word-quiz-v1.firebaseapp.com",
+  databaseURL: "https://four-word-quiz-v1-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "four-word-quiz-v1",
+  storageBucket: "four-word-quiz-v1.firebasestorage.app",
+  messagingSenderId: "551656050149",
+  appId: "1:551656050149:web:33f8359ea046c035d8f30c"
+};
+/* =============================================================== */
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+/* ---------- 효과음 (Web Audio, 외부 파일 불필요) ---------- */
+let actx;
+function beep(freq, dur, type = "sine", vol = 0.2) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.value = vol; o.start();
+    g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+    o.stop(actx.currentTime + dur);
+  } catch (e) {}
+}
+const sfx = {
+  click:   () => beep(600, 0.05),
+  correct: () => { beep(880, 0.12); setTimeout(() => beep(1320, 0.15), 100); },
+  wrong:   () => beep(160, 0.3, "sawtooth"),
+  start:   () => { beep(523, 0.1); setTimeout(() => beep(784, 0.15), 120); },
+  end:     () => { beep(392, 0.2); setTimeout(() => beep(262, 0.3), 200); },
+  fanfare: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.25), i * 150))
+};
+document.body.addEventListener("click", () => { if (actx && actx.state === "suspended") actx.resume(); });
+
+/* ---------- 공통 유틸 ---------- */
+const $ = id => document.getElementById(id);
+function show(id) { $(id).classList.remove("hidden"); }
+function hide(id) { $(id).classList.add("hidden"); }
+const statusText = s => ({ waiting: "대기 중", playing: "진행 중", paused: "잠시 멈춤", finished: "게임 종료" }[s] || s);
+
+let authReady = new Promise(resolve => {
+  auth.onAuthStateChanged(u => { if (u) resolve(u); });
+  auth.signInAnonymously().catch(e => alert("로그인 오류: " + e.message));
+});
+async function myToken() { return auth.currentUser.getIdToken(); }
+async function clueOf(index) {
+  const snap = await db.ref("questionBank/fourWordQuiz/questions/" + index + "/clue").get();
+  return snap.exists() ? snap.val() : "(문제 없음)";
+}
+
+/* ================= 화면 전환 ================= */
+$("btnGoTeacher").onclick = () => { sfx.click(); hide("home"); show("teacher"); $("teacherPw").focus(); };
+$("btnGoStudent").onclick = () => { sfx.click(); hide("home"); show("student"); $("sRoom").focus(); };
+
+/* URL 에 ?room=코드 가 있으면 학생 화면으로 자동 이동 + 방코드 채움 */
+(function () {
+  const p = new URLSearchParams(location.search);
+  const r = p.get("room");
+  if (r) { hide("home"); show("student"); $("sRoom").value = r; setTimeout(() => $("sNick").focus(), 100); }
+})();
+
+/* ================================================================
+   강사(Teacher)
+================================================================ */
+let hostRoom = null;
+
+$("teacherPw").addEventListener("keydown", e => { if (e.key === "Enter") $("btnCreateRoom").click(); });
+
+$("btnCreateRoom").onclick = async () => {
+  sfx.click();
+  const pw = $("teacherPw").value.trim();
+  $("teacherErr").textContent = "";
+  if (!pw) { $("teacherErr").textContent = "비밀번호를 입력하세요."; return; }
+  try {
+    await authReady;
+    const res = await fetch("/api/check-teacher", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw, idToken: await myToken() })
+    });
+    const data = await res.json();
+    if (!res.ok) { $("teacherErr").textContent = data.error || "오류"; return; }
+    hostRoom = data.roomCode;
+    startTeacherPanel(data.roomCode, data.totalQuestions);
+  } catch (e) {
+    $("teacherErr").textContent = "네트워크 오류: " + e.message;
+  }
+};
+
+function startTeacherPanel(code, total) {
+  hide("teacherLogin"); show("teacherPanel");
+  $("tRoomCode").textContent = code;
+  const link = location.origin + "/?room=" + code;
+  $("tLink").textContent = link;
+  $("tQR").src = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(link);
+
+  const roomRef = db.ref("rooms/" + code);
+
+  // 참가자 목록 + 점수
+  roomRef.child("players").on("value", snap => {
+    const players = snap.val() || {};
+    const arr = Object.entries(players);
+    $("tCount").textContent = arr.length;
+    $("tPlayers").innerHTML = arr
+      .sort((a, b) => (b[1].score || 0) - (a[1].score || 0))
+      .map(([uid, p]) => `<span class="chip">${escapeHtml(p.nickname)} · ${p.score || 0}점</span>`).join("");
+  });
+
+  // 상태 / 진행 표시
+  roomRef.child("gameStatus").on("value", s => { $("tGameStatus").textContent = statusText(s.val()); });
+  roomRef.child("currentIndex").on("value", async s => {
+    const idx = s.val();
+    if (idx === null || idx < 0) { $("tClue").textContent = "아직 시작 전입니다."; $("tProgress").textContent = ""; return; }
+    $("tProgress").textContent = `문제 ${idx + 1} / ${total}`;
+    $("tClue").textContent = await clueOf(idx);
+  });
+  roomRef.child("ranking").on("value", s => {
+    const r = s.val();
+    if (!r) { hide("tRankingWrap"); return; }
+    show("tRankingWrap");
+    $("tRanking").innerHTML = renderRanking(r);
+    sfx.fanfare();
+  });
+}
+
+// 강사 버튼들
+async function hostSet(obj) { await db.ref("rooms/" + hostRoom).update(obj); }
+
+$("btnStart").onclick = async () => {
+  sfx.start();
+  await db.ref("rooms/" + hostRoom + "/ranking").remove();
+  await hostSet({ gameStatus: "playing", currentIndex: 0 });
+};
+$("btnNext").onclick = async () => {
+  sfx.click();
+  const snap = await db.ref("rooms/" + hostRoom).get();
+  const room = snap.val() || {};
+  if (room.gameStatus === "waiting") { alert("먼저 '게임 시작'을 눌러주세요."); return; }
+  const next = (room.currentIndex ?? -1) + 1;
+  if (next >= room.totalQuestions) { await finalize(); }
+  else { await hostSet({ currentIndex: next, gameStatus: "playing" }); }
+};
+$("btnPause").onclick = async () => { sfx.click(); await hostSet({ gameStatus: "paused" }); };
+$("btnResume").onclick = async () => { sfx.click(); await hostSet({ gameStatus: "playing" }); };
+$("btnForceEnd").onclick = async () => { sfx.click(); if (confirm("게임을 종료하고 순위를 발표할까요?")) await finalize(); };
+
+$("btnReset").onclick = async () => {
+  sfx.click();
+  if (!confirm("초기화하면 학생 전원 퇴장 + 모든 기록이 삭제됩니다. 진행할까요?")) return;
+  const base = db.ref("rooms/" + hostRoom);
+  await base.child("players").remove();
+  await base.child("ranking").remove();
+  await db.ref("submissions/" + hostRoom).remove();
+  await hostSet({ gameStatus: "waiting", currentIndex: -1 });
+  hide("tRankingWrap");
+};
+
+$("btnEditScore").onclick = async () => {
+  sfx.click();
+  const snap = await db.ref("rooms/" + hostRoom + "/players").get();
+  const players = snap.val() || {};
+  const list = Object.entries(players).map(([uid, p], i) => `${i + 1}. ${p.nickname} (${p.score || 0}점)`).join("\n");
+  const arr = Object.entries(players);
+  if (!arr.length) { alert("참가자가 없습니다."); return; }
+  const pick = prompt("점수를 수정할 학생 번호를 입력하세요:\n\n" + list);
+  const n = parseInt(pick, 10);
+  if (!n || n < 1 || n > arr.length) return;
+  const [uid, p] = arr[n - 1];
+  const val = prompt(`${p.nickname} 님의 새 점수:`, p.score || 0);
+  const newScore = parseInt(val, 10);
+  if (isNaN(newScore)) return;
+  await db.ref("rooms/" + hostRoom + "/players/" + uid + "/score").set(newScore);
+};
+
+async function finalize() {
+  const snap = await db.ref("rooms/" + hostRoom + "/players").get();
+  const players = snap.val() || {};
+  const sorted = Object.entries(players)
+    .map(([uid, p]) => ({ uid, nickname: p.nickname, score: p.score || 0, joinedAt: p.joinedAt || 0 }))
+    .sort((a, b) => b.score - a.score || a.joinedAt - b.joinedAt);
+  const ranking = {};
+  if (sorted[0]) ranking.first = sorted[0];
+  if (sorted[1]) ranking.second = sorted[1];
+  if (sorted[2]) ranking.third = sorted[2];
+  await db.ref("rooms/" + hostRoom + "/ranking").set(ranking);
+  await hostSet({ gameStatus: "finished" });
+  sfx.end();
+}
+
+/* ================================================================
+   학생(Student)
+================================================================ */
+let myRoom = null, myUid = null, myIndex = -1, answeredIndex = -1;
+
+$("sRoom").addEventListener("keydown", e => { if (e.key === "Enter") $("sNick").focus(); });
+$("sNick").addEventListener("keydown", e => { if (e.key === "Enter") $("btnJoin").click(); });
+
+$("btnJoin").onclick = async () => {
+  sfx.click();
+  const room = $("sRoom").value.trim();
+  const nick = $("sNick").value.trim();
+  $("studentErr").textContent = "";
+  if (!room || !nick) { $("studentErr").textContent = "방 코드와 닉네임을 모두 입력하세요."; return; }
+  try {
+    await authReady;
+    myUid = auth.currentUser.uid;
+    const roomSnap = await db.ref("rooms/" + room).get();
+    if (!roomSnap.exists()) { $("studentErr").textContent = "존재하지 않는 방 코드입니다."; return; }
+    myRoom = room;
+    await db.ref("rooms/" + room + "/players/" + myUid).set({
+      nickname: nick, score: 0,
+      joinedAt: firebase.database.ServerValue.TIMESTAMP,
+      lastActiveAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    startStudentGame();
+  } catch (e) {
+    $("studentErr").textContent = "입장 오류: " + e.message;
+  }
+};
+
+function startStudentGame() {
+  hide("studentJoin"); show("studentGame");
+  const roomRef = db.ref("rooms/" + myRoom);
+  const total = () => roomRef.child("totalQuestions").get().then(s => s.val() || 0);
+
+  // 내 점수
+  roomRef.child("players/" + myUid + "/score").on("value", s => { $("sScore").textContent = s.val() ?? 0; });
+
+  // 초기화되어 내가 퇴장 처리되면 다시 입장 화면으로
+  roomRef.child("players/" + myUid).on("value", s => {
+    if (!s.exists()) { alert("강사가 게임을 초기화했습니다. 다시 입장해 주세요."); location.reload(); }
+  });
+
+  // 상태
+  roomRef.child("gameStatus").on("value", s => {
+    const st = s.val();
+    $("sStatus").textContent = statusText(st);
+    if (st === "playing") { if (myIndex >= 0 && answeredIndex !== myIndex) show("sAnswerBox"); }
+    else hide("sAnswerBox");
+    if (st === "paused") $("sResult").textContent = "잠시 멈춤 — 강사를 기다려 주세요.";
+  });
+
+  // 현재 문제
+  roomRef.child("currentIndex").on("value", async s => {
+    const idx = s.val();
+    myIndex = (idx ?? -1);
+    if (myIndex < 0) { $("sClue").textContent = "강사가 게임을 시작하면 문제가 나옵니다."; hide("sAnswerBox"); return; }
+    const t = await total();
+    $("sProgress").textContent = `문제 ${myIndex + 1} / ${t}`;
+    $("sClue").textContent = await clueOf(myIndex);
+    $("sResult").textContent = "";
+    $("sAnswer").value = "";
+    // 새 문제 → 다시 답할 수 있음
+    const st = (await roomRef.child("gameStatus").get()).val();
+    if (st === "playing" && answeredIndex !== myIndex) { show("sAnswerBox"); $("sAnswer").focus(); }
+    else hide("sAnswerBox");
+  });
+
+  // 최종 순위
+  roomRef.child("ranking").on("value", s => {
+    const r = s.val();
+    if (!r) { hide("sRankingWrap"); return; }
+    show("sRankingWrap");
+    $("sRanking").innerHTML = renderRanking(r);
+    hide("sAnswerBox");
+    sfx.fanfare();
+  });
+}
+
+$("sAnswer").addEventListener("keydown", e => { if (e.key === "Enter") $("btnSubmit").click(); });
+
+$("btnSubmit").onclick = async () => {
+  const answer = $("sAnswer").value.trim();
+  if (!answer) return;
+  if (answeredIndex === myIndex) { $("sResult").textContent = "이미 제출했습니다."; return; }
+  hide("sAnswerBox");
+  try {
+    const res = await fetch("/api/submit-answer", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomCode: myRoom, index: myIndex, answer, idToken: await myToken() })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      $("sResult").textContent = data.error || "제출 오류";
+      if (!data.already) show("sAnswerBox");
+      return;
+    }
+    answeredIndex = myIndex;
+    if (data.correct) { sfx.correct(); $("sResult").innerHTML = '<div class="result-ok">정답입니다 (+1)</div>'; }
+    else { sfx.wrong(); $("sResult").innerHTML = '<div class="result-no">오답입니다 (-1)</div>'; }
+  } catch (e) {
+    $("sResult").textContent = "네트워크 오류: " + e.message;
+    show("sAnswerBox");
+  }
+};
+
+/* ================= 공통 렌더 ================= */
+function renderRanking(r) {
+  const rows = [["1위", "rank1", r.first], ["2위", "rank2", r.second], ["3위", "rank3", r.third]]
+    .filter(x => x[2])
+    .map(([m, cls, p]) => `<tr class="${cls}"><td class="medal">${m}</td><td>${escapeHtml(p.nickname)}</td><td>${p.score}점</td></tr>`)
+    .join("");
+  return `<table><tr><th></th><th>닉네임</th><th>점수</th></tr>${rows}</table>`;
+}
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+</script>
+</body>
+</html>

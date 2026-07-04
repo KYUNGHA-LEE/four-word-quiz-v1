@@ -1,0 +1,55 @@
+{
+  "rules": {
+    "questionBank": {
+      "fourWordQuiz": {
+        "count": { ".read": "auth != null" },
+        "questions": {
+          "$i": {
+            "clue":    { ".read": "auth != null" },
+            "answers": { ".read": false, ".write": false }
+          }
+        }
+      }
+    },
+
+    "rooms": {
+      "$room": {
+        ".read": "auth != null",
+
+        "hostUid":        { ".write": false },
+        "createdAt":      { ".write": false },
+        "gameType":       { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
+        "gameStatus":     { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
+        "currentIndex":   { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
+        "totalQuestions": { ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()" },
+
+        "ranking": {
+          ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()"
+        },
+
+        "players": {
+          ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()",
+          "$uid": {
+            ".write": "auth.uid === $uid || auth.uid === root.child('rooms').child($room).child('hostUid').val()",
+            "nickname":     { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" },
+            "score":        { ".validate": "auth.uid === root.child('rooms').child($room).child('hostUid').val() || (!data.exists() && newData.val() === 0) || newData.val() === data.val()" },
+            "joinedAt":     { ".validate": true },
+            "lastActiveAt": { ".validate": true },
+            "$other":       { ".validate": false }
+          }
+        }
+      }
+    },
+
+    "submissions": {
+      "$room": {
+        ".write": "auth.uid === root.child('rooms').child($room).child('hostUid').val()",
+        "$i": {
+          "$uid": {
+            ".read": "auth.uid === $uid || auth.uid === root.child('rooms').child($room).child('hostUid').val()"
+          }
+        }
+      }
+    }
+  }
+}
