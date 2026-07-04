@@ -218,6 +218,13 @@ function show(id) { $(id).classList.remove("hidden"); }
 function hide(id) { $(id).classList.add("hidden"); }
 const statusText = s => ({ waiting: "대기 중", playing: "진행 중", paused: "잠시 멈춤", finished: "게임 종료" }[s] || s);
 
+// 한글(IME) 입력 중에도 Enter 한 번에 실행되도록: 조합이 끝난 뒤(다음 틱) 실행
+function onEnter(el, fn) {
+  el.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.keyCode === 13) { e.preventDefault(); setTimeout(fn, 0); }
+  });
+}
+
 let authReady = new Promise(resolve => {
   auth.onAuthStateChanged(u => { if (u) resolve(u); });
   auth.signInAnonymously().catch(e => alert("로그인 오류: " + e.message));
@@ -259,7 +266,7 @@ $("btnGoStudent").onclick = () => { sfx.click(); hide("home"); show("student"); 
 ================================================================ */
 let hostRoom = null;
 
-$("teacherPw").addEventListener("keydown", e => { if (e.key === "Enter") $("btnCreateRoom").click(); });
+onEnter($("teacherPw"), () => $("btnCreateRoom").click());
 
 $("btnCreateRoom").onclick = async () => {
   sfx.click();
@@ -386,8 +393,8 @@ async function finalize() {
 ================================================================ */
 let myRoom = null, myUid = null, myIndex = -1, answeredIndex = -1, curPrefix = "";
 
-$("sRoom").addEventListener("keydown", e => { if (e.key === "Enter") $("sNick").focus(); });
-$("sNick").addEventListener("keydown", e => { if (e.key === "Enter") $("btnJoin").click(); });
+onEnter($("sRoom"), () => $("sNick").focus());
+onEnter($("sNick"), () => $("btnJoin").click());
 
 $("btnJoin").onclick = async () => {
   sfx.click();
@@ -462,7 +469,7 @@ function startStudentGame() {
   });
 }
 
-$("sAnswer").addEventListener("keydown", e => { if (e.key === "Enter") $("btnSubmit").click(); });
+onEnter($("sAnswer"), () => $("btnSubmit").click());
 $("sAnswer").addEventListener("input", () => {
   if (myIndex >= 0) $("sClue").innerHTML = tilesHtml(curPrefix, $("sAnswer").value.trim());
 });
