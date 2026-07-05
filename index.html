@@ -125,16 +125,13 @@
 
   <!-- ================= 첫 화면 ================= -->
   <div id="home" class="card">
-    <button id="btnGoTeacher">강사로 입장</button>
-    <button id="btnGoStudent" class="ghost">학생으로 입장</button>
+    <button id="btnGoStudent">학생으로 입장</button>
   </div>
 
   <!-- ================= 강사 화면 ================= -->
   <div id="teacher" class="card hidden">
     <!-- 로그인 -->
     <div id="teacherLogin">
-      <label>강사 비밀번호</label>
-      <input id="teacherPw" type="password" placeholder="비밀번호 입력 후 Enter" autocomplete="off">
       <button id="btnCreateRoom">방 만들기</button>
       <div class="err" id="teacherErr"></div>
     </div>
@@ -309,12 +306,12 @@ function tilesHtml(prefix, typed) {
 }
 
 /* ================= 화면 전환 ================= */
-$("btnGoTeacher").onclick = () => { sfx.click(); hide("home"); show("teacher"); $("teacherPw").focus(); };
 $("btnGoStudent").onclick = () => { sfx.click(); hide("home"); show("student"); $("sRoom").focus(); };
 
-/* URL 에 ?room=코드 가 있으면 학생 화면으로 자동 이동 + 방코드 채움 */
+/* URL 분기: ?mode=admin 이면 강사 화면(비밀번호 없음), ?room=코드 면 학생 화면 */
 (function () {
   const p = new URLSearchParams(location.search);
+  if (p.get("mode") === "admin") { hide("home"); show("teacher"); return; }
   const r = p.get("room");
   if (r) { hide("home"); show("student"); $("sRoom").value = r; setTimeout(() => $("sNick").focus(), 100); }
 })();
@@ -324,18 +321,14 @@ $("btnGoStudent").onclick = () => { sfx.click(); hide("home"); show("student"); 
 ================================================================ */
 let hostRoom = null, hostBankCount = 0;
 
-onEnter($("teacherPw"), () => $("btnCreateRoom").click());
-
 $("btnCreateRoom").onclick = async () => {
   sfx.click();
-  const pw = $("teacherPw").value.trim();
   $("teacherErr").textContent = "";
-  if (!pw) { $("teacherErr").textContent = "비밀번호를 입력하세요."; return; }
   try {
     await authReady;
-    const res = await fetch("/api/check-teacher", {
+    const res = await fetch("/api/create-room", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pw, idToken: await myToken() })
+      body: JSON.stringify({ idToken: await myToken() })
     });
     const data = await res.json();
     if (!res.ok) { $("teacherErr").textContent = data.error || "오류"; return; }

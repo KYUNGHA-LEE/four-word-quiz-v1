@@ -21,7 +21,7 @@
 ├── vercel.json           Vercel 설정
 ├── database.rules.json   Firebase 보안 규칙 (콘솔에 붙여넣기)
 └── api/
-    ├── check-teacher.js  강사 비밀번호 확인 + 방 생성 + hostUid 등록
+    ├── create-room.js    방 생성 + hostUid 등록 (강사 화면에서 호출, 비밀번호 없음)
     └── submit-answer.js  학생 답안 채점 (정답 목록은 서버만 접근)
 ```
 
@@ -99,7 +99,6 @@
 
 | 이름 | 값 |
 |---|---|
-| `TEACHER_PASSWORD` | 강사 비밀번호 (쉬운 값 금지) |
 | `FIREBASE_PROJECT_ID` | 서비스 계정의 `project_id` |
 | `FIREBASE_CLIENT_EMAIL` | 서비스 계정의 `client_email` |
 | `FIREBASE_PRIVATE_KEY` | 서비스 계정의 `private_key` (아래 주의) |
@@ -117,7 +116,7 @@
 
 강사
 
-1. 배포된 주소 접속 → 강사로 입장 → 비밀번호 입력(Enter) → 방 만들기
+1. `배포주소/?mode=admin` 접속 → 방 만들기 (비밀번호 없음, 이 주소는 학생에게 알려주지 말 것)
 2. 화면의 방 코드 / QR / 링크를 학생에게 공유
 3. 게임 시작 → 다음 문제 로 진행 → 마지막 문제 후 자동 종료(순위 발표)
 4. 필요 시 일시정지 / 재개 / 강제 종료 / 점수 수정 / 초기화 사용
@@ -134,7 +133,6 @@
 
 | 증상 | 확인할 것 |
 |---|---|
-| 방 만들기 시 "비밀번호가 틀렸습니다" | Vercel `TEACHER_PASSWORD` 값 / Redeploy 여부 |
 | "등록된 문제가 없습니다" | Firebase `questionBank/fourWordQuiz` 데이터, `count` 값 |
 | 제출은 되는데 점수 안 변함 | 서비스 계정 환경변수 4개, `FIREBASE_DATABASE_URL` 정확한지 |
 | 화면은 뜨는데 로그인 오류 | `index.html` 의 `firebaseConfig`, Authentication 익명 로그인 켰는지 |
