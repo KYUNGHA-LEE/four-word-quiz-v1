@@ -21,7 +21,7 @@ const norm = (s) => String(s == null ? "" : s).replace(/\s+/g, "").toLowerCase()
 async function judgeWithGemini(word) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key;
   const prompt =
     '다음이 실제로 존재하고 자연스럽게 쓰이는 한국어 낱말(합성어·사자성어 포함)인지 판단하세요. ' +
@@ -92,12 +92,23 @@ module.exports = async (req, res) => {
     let correct = answers.some((a) => norm(a) === my);
 
     // 목록에 없으면 Gemini에게 실제 낱말인지 판정 요청 (하이브리드)
+    // 같은 단어는 한 번만 물어보도록 판정 결과를 DB에 캐시해 무료 한도를 아낀다
     if (!correct) {
       const prefixSnap = await db.ref("questionBank/fourWordQuiz/questions/" + bankIndex + "/prefix").get();
       const prefix = prefixSnap.exists() ? String(prefixSnap.val()) : "";
       const fullWord = prefix + String(answer).replace(/\s+/g, "");
-      const ai = await judgeWithGemini(fullWord);
-      if (ai === true) correct = true;
+      const cacheKey = fullWord.replace(/[.#$\[\]\/]/g, "").slice(0, 50);
+      const cacheRef = cacheKey ? db.ref("questionBank/fourWordQuiz/aiJudgments/" + cacheKey) : null;
+      const cached = cacheRef ? (await cacheRef.get()).val() : null;
+      if (cached === true || cached === false) {
+        correct = cached;
+      } else {
+        const ai = await judgeWithGemini(fullWord);
+        if (ai === true) correct = true;
+        if (cacheRef && (ai === true || ai === false)) {
+          try { await cacheRef.set(ai); } catch (e) {}
+        }
+      }
     }
 
     // 5) 제출 기록 + 점수 반영 (정답 +1 / 오답 0점, 감점 없음)
