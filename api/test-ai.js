@@ -1,7 +1,7 @@
 // 임시 진단용 — Gemini 판정이 서버에서 작동하는지 확인 (확인 후 삭제할 것)
 module.exports = async (req, res) => {
   const key = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = String((req.query && req.query.model) || process.env.GEMINI_MODEL || "gemini-2.5-flash").slice(0, 40);
   const info = {
     hasKey: Boolean(key),
     keyLength: key ? key.length : 0,
